@@ -1,6 +1,6 @@
-#!/usr/bin/env python2.5
+#!/usr/bin/env python3
 
-import cgi
+import html
 import os
 import shutil
 import sys
@@ -24,7 +24,7 @@ APPLICATION_COMPONENTS = [
 ]
 
 def usage():
-  print "usage: fill_screens.py -- fills up the launcher db"
+  print("usage: fill_screens.py -- fills up the launcher db")
 
 
 def make_dir():
@@ -32,47 +32,47 @@ def make_dir():
   os.makedirs(DIR)
 
 def pull_file(fn):
-  print "pull_file: " + fn
+  print("pull_file: " + fn)
   rv = os.system("adb pull"
     + " /data/data/com.android.launcher/databases/launcher.db"
-    + " " + fn);
+    + " " + fn)
   if rv != 0:
-    print "adb pull failed"
+    print("adb pull failed")
     sys.exit(1)
 
 def push_file(fn):
-  print "push_file: " + fn
+  print("push_file: " + fn)
   rv = os.system("adb push"
     + " " + fn
     + " /data/data/com.android.launcher/databases/launcher.db")
   if rv != 0:
-    print "adb push failed"
+    print("adb push failed")
     sys.exit(1)
 
 def process_file(fn):
-  print "process_file: " + fn
+  print("process_file: " + fn)
   conn = sqlite3.connect(fn)
   c = conn.cursor()
   c.execute("DELETE FROM favorites")
 
   intentFormat = "#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;launchFlags=0x10200000;component=%s;end"
 
-  id = 0;
+  new_id = 0
   for s in range(SCREENS):
     for x in range(ROWS):
       for y in range(COLUMNS):
-        id += 1
-        insert = "INSERT into favorites (_id, title, intent, container, screen, cellX, cellY, spanX, spanY, itemType, appWidgetId, iconType) VALUES (%d, '%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d)"
-        insert = insert % (id, "title", "", -100, s, x, y, 1, 1, 2, -1, 0)
-        c.execute(insert)
-        folder_id = id
+        new_id += 1
+        insert = ("INSERT into favorites (_id, title, intent, container, screen, cellX, cellY, spanX, spanY, "
+                  "itemType, appWidgetId, iconType) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        c.execute(insert, (new_id, "title", "", -100, s, x, y, 1, 1, 2, -1, 0))
+        folder_id = new_id
 
         for z in range(15):
-          id += 1
-          intent = intentFormat % (APPLICATION_COMPONENTS[id % len(APPLICATION_COMPONENTS)])
-          insert = "INSERT into favorites (_id, title, intent, container, screen, cellX, cellY, spanX, spanY, itemType, appWidgetId, iconType) VALUES (%d, '%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, %d)"
-          insert = insert % (id, "title", intent, folder_id, 0, 0, 0, 1, 1, 0, -1, 0)
-          c.execute(insert)
+          new_id += 1
+          intent = intentFormat % (APPLICATION_COMPONENTS[new_id % len(APPLICATION_COMPONENTS)])
+          insert = ("INSERT into favorites (_id, title, intent, container, screen, cellX, cellY, spanX, spanY, "
+                    "itemType, appWidgetId, iconType) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+          c.execute(insert, (new_id, "title", intent, folder_id, 0, 0, 0, 1, 1, 0, -1, 0))
 
   conn.commit()
   c.close()
