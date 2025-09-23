@@ -1,6 +1,6 @@
-#!/usr/bin/env python2.5
+#!/usr/bin/env python3
 
-import cgi
+import html
 import codecs
 import os
 import pprint
@@ -23,13 +23,13 @@ AUTO_FILE = DIR + "/launcher.db"
 INDEX_FILE = DIR + "/index.html"
 
 def usage():
-  print "usage: print_db.py launcher.db <4x4|5x5|5x6|...> -- prints a launcher.db with"
-  print "       the specified grid size (rows x cols)"
-  print "usage: print_db.py <4x4|5x5|5x6|...> -- adb pulls a launcher.db from a device"
-  print "       and prints it with the specified grid size (rows x cols)"
-  print
-  print "The dump will be created in a directory called db_files in cwd."
-  print "This script will delete any db_files directory you have now"
+  print("usage: print_db.py launcher.db <4x4|5x5|5x6|...> -- prints a launcher.db with")
+  print("       the specified grid size (rows x cols)")
+  print("usage: print_db.py <4x4|5x5|5x6|...> -- adb pulls a launcher.db from a device")
+  print("       and prints it with the specified grid size (rows x cols)")
+  print()
+  print("The dump will be created in a directory called db_files in cwd.")
+  print("This script will delete any db_files directory you have now")
 
 
 def make_dir():
@@ -41,12 +41,12 @@ def adb_root_remount():
   os.system("adb remount")
 
 def pull_file(fn):
-  print "pull_file: " + fn
+  print("pull_file: " + fn)
   rv = os.system("adb pull"
     + " /data/data/com.android.launcher3/databases/launcher.db"
     + " " + fn);
   if rv != 0:
-    print "adb pull failed"
+    print("adb pull failed")
     sys.exit(1)
 
 def get_favorites(conn):
@@ -70,7 +70,7 @@ def get_screens(conn):
 def print_intent(out, id, i, cell):
   if cell:
     out.write("""<span class="intent" title="%s">shortcut</span>""" % (
-        cgi.escape(cell, True)
+        html.escape(cell, quote=True)
       ))
 
 
@@ -78,7 +78,7 @@ def print_icon(out, id, i, cell):
   if cell:
     icon_fn = "icon_%d.png" % id
     out.write("""<img style="width: 3em; height: 3em;" src="%s">""" % ( icon_fn ))
-    f = file(DIR + "/" + icon_fn, "w")
+    f = open(DIR + "/" + icon_fn, "wb")
     f.write(cell)
     f.close()
 
@@ -96,7 +96,7 @@ def print_icon_type(out, id, i, cell):
 
 def print_cell(out, id, i, cell):
   if not cell is None:
-    out.write(cgi.escape(unicode(cell)))
+    out.write(html.escape(str(cell)))
 
 FUNCTIONS = {
   "intent": print_intent,
@@ -117,7 +117,7 @@ def render_cell_info(out, cell, occupied):
     spanY = cell["spanY"]
     intent = cell["intent"]
     if intent:
-      title = "title=\"%s\"" % cgi.escape(cell["intent"], True)
+      title = "title=\"%s\"" % html.escape(cell["intent"], quote=True)
     else:
       title = ""
     out.write(("    <td colspan=%d rowspan=%d width=%d height=%d"
@@ -129,11 +129,11 @@ def render_cell_info(out, cell, occupied):
     if itemType == 0:
       out.write("""<img style="width: 4em; height: 4em;" src="icon_%d.png">\n""" % ( cell["_id"] ))
       out.write("<br/>\n")
-      out.write(cgi.escape(cell["title"]) + " <br/><i>(app)</i>")
+      out.write(html.escape(cell["title"]) + " <br/><i>(app)</i>")
     elif itemType == 1:
       out.write("""<img style="width: 4em; height: 4em;" src="icon_%d.png">\n""" % ( cell["_id"] ))
       out.write("<br/>\n")
-      out.write(cgi.escape(cell["title"]) + " <br/><i>(shortcut)</i>")
+      out.write(html.escape(cell["title"]) + " <br/><i>(shortcut)</i>")
     elif itemType == 2:
       out.write("""<i>folder</i>""")
     elif itemType == 4:
@@ -150,7 +150,7 @@ def render_screen_info(out, screen):
 
 def process_file(fn):
   global SCREENS, COLUMNS, ROWS, HOTSEAT_SIZE
-  print "process_file: " + fn
+  print("process_file: " + fn)
   conn = sqlite3.connect(fn)
   columns,rows = get_favorites(conn)
   screenCols, screenRows = get_screens(conn)
@@ -171,7 +171,7 @@ def process_file(fn):
       if d["screen"] not in screensIdMap:
         screensIdMap.append(d["screen"])
       COLUMNS = max(COLUMNS, d["cellX"] + d["spanX"])
-      ROWS = max(ROWS, d["cellX"] + d["spanX"])
+      ROWS = max(ROWS, d["cellY"] + d["spanY"])  # fixed bug: use Y for rows
     elif d["container"] == CONTAINER_HOTSEAT:
       hotseatIdMap.append(d["screen"])
       HOTSEAT_SIZE = max(HOTSEAT_SIZE, d["screen"] + 1)
